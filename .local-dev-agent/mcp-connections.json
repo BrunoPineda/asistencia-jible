@@ -1,0 +1,57 @@
+{
+  "mcpServers": {
+    "apolo13-postgres": {
+      "command": "C:\\nvm4w\\nodejs\\npx.cmd",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://usrflash:U7p%232505_flash@utp-db-dev-apolo13-pg.c30arlrgejdz.us-east-1.rds.amazonaws.com:5432/apolo13?sslmode=no-verify"
+      ],
+      "env": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      }
+    },
+    "flash-mysql": {
+      "command": "C:\\nvm4w\\nodejs\\npx.cmd",
+      "args": [
+        "-y",
+        "@benborla2514/mcp-server-mysql"
+      ],
+      "env": {
+        "MYSQL_HOST": "bdutpdev.c30arlrgejdz.us-east-1.rds.amazonaws.com",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "admin",
+        "MYSQL_PASS": "Inlearning$2020",
+        "MYSQL_DB": "flash"
+      }
+    },
+    "payments-mysql": {
+      "command": "C:\\nvm4w\\nodejs\\npx.cmd",
+      "args": [
+        "-y",
+        "@benborla2514/mcp-server-mysql"
+      ],
+      "env": {
+        "MYSQL_HOST": "bdutpdev.c30arlrgejdz.us-east-1.rds.amazonaws.com",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "admin",
+        "MYSQL_PASS": "Inlearning$2020",
+        "MYSQL_DB": "utpdevpayments"
+      }
+    },
+    "peoplesoft-mysql": {
+      "command": "C:\\nvm4w\\nodejs\\npx.cmd",
+      "args": [
+        "-y",
+        "@benborla2514/mcp-server-mysql"
+      ],
+      "env": {
+        "MYSQL_HOST": "bdutpdev.c30arlrgejdz.us-east-1.rds.amazonaws.com",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "admin",
+        "MYSQL_PASS": "Inlearning$2020",
+        "MYSQL_DB": "peoplesoft"
+      }
+    }
+  }
+}

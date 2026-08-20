@@ -1,0 +1,16 @@
+{
+  "name": "jibble-automation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "api": "node server.mjs",
+    "completo": "node index.mjs completo",
+    "entrada": "node index.mjs entrada",
+    "salida": "node index.mjs salida"
+  },
+  "dependencies": {
+    "puppeteer": "^25.8.0"
+  }
+}
