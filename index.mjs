@@ -37,13 +37,35 @@ if (!email || !password) {
     throw new Error('Faltan JIBBLE_EMAIL o JIBBLE_PASSWORD en el archivo .env');
 }
 
-const browser = await launch({
-  headless,
-  slowMo: 10,
-  args: isDeveloper
-      ? []
-      : ['--no-sandbox', '--disable-setuid-sandbox']
+const launchOptions = isDeveloper
+    ? {
+        headless: false,
+        channel: 'chrome',
+        slowMo: 10,
+        protocolTimeout: 120000,
+        args: [
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--disable-background-timer-throttling'
+        ]
+    }
+    : {
+        headless,
+        slowMo: 10,
+        protocolTimeout: 120000,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage'
+        ]
+    };
+
+const browser = await launch(launchOptions);
+
+browser.on('disconnected', () => {
+    console.error(`[${new Date().toISOString()}] El navegador Chrome se desconectó inesperadamente`);
 });
+
 const page = await browser.newPage();
 const timeout = 30000;
 const navigationTimeout = 60000;
@@ -157,29 +179,86 @@ logStep(`Navegador visible: ${headless ? 'NO (headless)' : 'SÍ'}`);
 
     logStep('Botón de inicio de sesión habilitado');
     logStep('Enviando formulario de inicio de sesión');
-    await Promise.all([
-        targetPage.waitForNavigation({ waitUntil: 'networkidle2', timeout }).catch(() => null),
-        targetPage.click(loginButtonSelector)
-    ]);
-    logStep('Inicio de sesión completado');
+
+    const loginUrlBeforeSubmit = targetPage.url();
+    await targetPage.click(loginButtonSelector);
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    const dashboardIsVisible = await targetPage.evaluate(() => {
+        return Boolean(
+            document.querySelector("[data-testid='button-clock-out']") ||
+            document.querySelector("[data-testid='button-clock-in']")
+        );
+    });
+
+    if (!dashboardIsVisible && targetPage.url() === loginUrlBeforeSubmit) {
+        logStep('El primer clic no cambió la página; reintentando el login con Enter');
+        await targetPage.focus(passwordSelector);
+        await targetPage.keyboard.press('Enter');
+    }
+
+    logStep('Esperando que cargue el panel principal de Jibble');
+
+    try {
+        await targetPage.waitForFunction(
+            () => {
+                return Boolean(
+                    document.querySelector("[data-testid='button-clock-out']") ||
+                    document.querySelector("[data-testid='button-clock-in']")
+                );
+            },
+            { timeout: navigationTimeout, polling: 500 }
+        );
+    } catch (error) {
+        const diagnostic = await targetPage.evaluate(() => ({
+            url: location.href,
+            title: document.title,
+            visibleText: document.body?.innerText
+                ?.replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 1200) || 'Sin texto visible'
+        })).catch(() => ({
+            url: targetPage.url(),
+            title: 'No disponible',
+            visibleText: 'No se pudo inspeccionar la página'
+        }));
+
+        console.error('[LOGIN] Diagnóstico:', JSON.stringify(diagnostic));
+        throw new Error(
+            `Jibble no cargó el panel después del login. URL: ${diagnostic.url}. ` +
+            `Mensaje visible: ${diagnostic.visibleText}`,
+            { cause: error }
+        );
+    }
+
+    logStep(`Inicio de sesión completado. URL actual: ${targetPage.url()}`);
 }
 
 if (executionMode !== 'entrada') {
 logStep('Iniciando marcación de salida');
 {
     const targetPage = page;
-    await Locator.race([
-        targetPage.locator("[data-testid='button-clock-out'] i"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"button-clock-out\\"]/span[2]/i)'),
-        targetPage.locator(":scope >>> [data-testid='button-clock-out'] i")
-    ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 12.2249755859375,
-            y: 0,
-          },
-        });
+    const clockOutSelector = "[data-testid='button-clock-out']";
+
+    logStep('Esperando el botón de salida');
+    await targetPage.waitForSelector(clockOutSelector, {
+        visible: true,
+        timeout: navigationTimeout
+    });
+
+    await targetPage.waitForFunction(
+        selector => {
+            const button = document.querySelector(selector);
+            return button &&
+                !button.disabled &&
+                button.getAttribute('aria-disabled') !== 'true';
+        },
+        { timeout: navigationTimeout },
+        clockOutSelector
+    );
+
+    await targetPage.click(clockOutSelector);
+    logStep('Botón de salida pulsado');
 }
 {
     const targetPage = page;
