@@ -21,7 +21,7 @@ try {
 }
 
 const email = process.env.JIBBLE_EMAIL;
-const password = process.env.JIBBLE_PASSWORD;
+const password = [REDACTED]
 const headless = String(process.env.BROWSER_HEADLESS ?? 'false').toLowerCase() === 'true';
 
 if (!email || !password) {
@@ -151,23 +151,48 @@ logStep('Iniciando marcación de salida');
 }
 {
     const targetPage = page;
-    await Locator.race([
-        targetPage.locator('div.q-card__actions'),
-        targetPage.locator('::-p-xpath(//*[@id=\\"app\\"]/div/div/div/div[2]/div/aside/div/div/div[3])'),
-        targetPage.locator(':scope >>> div.q-card__actions'),
-        targetPage.locator('::-p-text(CancelarGuardar)')
-    ])
-        .setTimeout(timeout)
-        .click({
-          delay: 420.80000001192093,
-          offset: {
-            x: 316.3999938964844,
-            y: 59.54998779296875,
-          },
+    const actionsSelector = '.q-card__actions';
+
+    logStep('Esperando las acciones para terminar la sesión');
+
+    await targetPage.waitForFunction(
+        selector => {
+            const container = document.querySelector(selector);
+            if (!container) return false;
+
+            return [...container.querySelectorAll('button')].some(button => {
+                const rect = button.getBoundingClientRect();
+                return rect.width > 0 &&
+                    rect.height > 0 &&
+                    !button.disabled &&
+                    button.getAttribute('aria-disabled') !== 'true';
+            });
+        },
+        { timeout: navigationTimeout },
+        actionsSelector
+    );
+
+    const clickedButtonText = await targetPage.evaluate(selector => {
+        const container = document.querySelector(selector);
+        const buttons = [...container.querySelectorAll('button')].filter(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.width > 0 &&
+                rect.height > 0 &&
+                !button.disabled &&
+                button.getAttribute('aria-disabled') !== 'true';
         });
+
+        const primaryButton = buttons.at(-1);
+        const buttonText = primaryButton?.innerText?.trim() || 'acción principal';
+        primaryButton?.click();
+        return buttonText;
+    }, actionsSelector);
+
+    logStep(`Acción pulsada: ${clickedButtonText}`);
 }
 {
     const targetPage = page;
+    logStep('Confirmando la marcación de salida');
     await Locator.race([
         targetPage.locator("[data-testid='right-sidebar-confirm-btn'] > span.q-btn__content"),
         targetPage.locator('::-p-xpath(//*[@data-testid=\\"right-sidebar-confirm-btn\\"]/span[2])'),
