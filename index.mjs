@@ -21,7 +21,7 @@ try {
 }
 
 const email = process.env.JIBBLE_EMAIL;
-const password = [REDACTED]
+const password = process.env.JIBBLE_PASSWORD;
 const headless = String(process.env.BROWSER_HEADLESS ?? 'false').toLowerCase() === 'true';
 
 if (!email || !password) {
