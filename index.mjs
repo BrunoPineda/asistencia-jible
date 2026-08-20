@@ -21,7 +21,7 @@ try {
 }
 
 const email = process.env.JIBBLE_EMAIL;
-const password = process.env.JIBBLE_PASSWORD;
+const password = [REDACTED]
 const headless = String(process.env.BROWSER_HEADLESS ?? 'false').toLowerCase() === 'true';
 
 if (!email || !password) {
@@ -33,7 +33,8 @@ const browser = await launch({
   slowMo: 10
 });
 const page = await browser.newPage();
-const timeout = 15000;
+const timeout = 30000;
+const navigationTimeout = 60000;
 const executionMode = process.argv[2] ?? 'completo';
 const validModes = new Set(['completo', 'entrada', 'salida']);
 
@@ -45,6 +46,7 @@ if (!validModes.has(executionMode)) {
     throw new Error(`Modo no válido: ${executionMode}`);
 }
 page.setDefaultTimeout(timeout);
+page.setDefaultNavigationTimeout(navigationTimeout);
 logStep(`Iniciando automatización en modo: ${executionMode}`);
 logStep(`Navegador visible: ${headless ? 'NO (headless)' : 'SÍ'}`);
 
@@ -58,7 +60,24 @@ logStep(`Navegador visible: ${headless ? 'NO (headless)' : 'SÍ'}`);
 {
     const targetPage = page;
     logStep('Abriendo la página de inicio de sesión de Jibble');
-    await targetPage.goto('https://web.jibble.io/login?ReturnUrl=https%3A%2F%2Fidentity.prod.jibble.io%2Fconnect%2Fauthorize%2Fcallback%3Fclient_id%3Dspa.client%26redirect_uri%3Dhttps%253A%252F%252Fweb.jibble.io%252Flogin%252Fcallback%26response_type%3Dcode%26scope%3Dopenid%2520profile%2520api1%2520email%2520phone%26state%3D5324b690b3b044e28e99906eafe8ea3c%26code_challenge%3DdnlQ0V7K6cTm8aKNvQk19Wd_mo1hT8KFXYQN_mEEf3M%26code_challenge_method%3DS256%26response_mode%3Dquery');
+    const loginUrl = 'https://web.jibble.io/login';
+
+    try {
+        await targetPage.goto(loginUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: navigationTimeout
+        });
+    } catch (error) {
+        logStep(`Primer intento de navegación falló: ${error.message}`);
+        logStep('Reintentando abrir Jibble');
+
+        await targetPage.goto(loginUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: navigationTimeout
+        });
+    }
+
+    logStep('Página de Jibble cargada');
 }
 // Inicio de sesión robusto para formularios Vue/Quasar.
 {
