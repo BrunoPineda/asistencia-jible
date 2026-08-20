@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { Locator, launch } from 'puppeteer'; // v25.0.0 or later
 
 // Carga variables desde .env sin dependencias externas.
 try {
@@ -22,7 +21,17 @@ try {
 
 const email = process.env.JIBBLE_EMAIL;
 const password = process.env.JIBBLE_PASSWORD;
-const headless = String(process.env.BROWSER_HEADLESS ?? 'false').toLowerCase() === 'true';
+const isDeveloper = String(process.env.DEVELOPER ?? 'false').toLowerCase() === 'true';
+
+if (isDeveloper) {
+    // Evita que Windows intente utilizar la ruta Linux configurada para Render.
+    delete process.env.PUPPETEER_CACHE_DIR;
+}
+
+const { Locator, launch } = await import('puppeteer');
+const headless = isDeveloper
+    ? false
+    : String(process.env.BROWSER_HEADLESS ?? 'true').toLowerCase() === 'true';
 
 if (!email || !password) {
     throw new Error('Faltan JIBBLE_EMAIL o JIBBLE_PASSWORD en el archivo .env');
@@ -30,7 +39,10 @@ if (!email || !password) {
 
 const browser = await launch({
   headless,
-  slowMo: 10
+  slowMo: 10,
+  args: isDeveloper
+      ? []
+      : ['--no-sandbox', '--disable-setuid-sandbox']
 });
 const page = await browser.newPage();
 const timeout = 30000;
@@ -48,6 +60,7 @@ if (!validModes.has(executionMode)) {
 page.setDefaultTimeout(timeout);
 page.setDefaultNavigationTimeout(navigationTimeout);
 logStep(`Iniciando automatización en modo: ${executionMode}`);
+logStep(`Entorno: ${isDeveloper ? 'DESARROLLO (Windows)' : 'PRODUCCIÓN (Render)'}`);
 logStep(`Navegador visible: ${headless ? 'NO (headless)' : 'SÍ'}`);
 
 {
@@ -87,15 +100,32 @@ logStep(`Navegador visible: ${headless ? 'NO (headless)' : 'SÍ'}`);
     const passwordSelector = "input[type='password']";
     const loginButtonSelector = "[data-testid='login-button']";
 
-    await targetPage.waitForSelector(emailSelector, { visible: true });
+    logStep(`URL actual del login: ${targetPage.url()}`);
+    logStep(`Título de la página: ${await targetPage.title()}`);
+
+    logStep('Esperando el campo de correo');
+    await targetPage.waitForSelector(emailSelector, {
+        visible: true,
+        timeout: navigationTimeout
+    });
+    logStep('Campo de correo encontrado');
+
     await targetPage.click(emailSelector, { clickCount: 3 });
     await targetPage.keyboard.press('Backspace');
     await targetPage.type(emailSelector, email, { delay: 0 });
+    logStep('Correo ingresado correctamente');
 
-    await targetPage.waitForSelector(passwordSelector, { visible: true });
+    logStep('Esperando el campo de contraseña');
+    await targetPage.waitForSelector(passwordSelector, {
+        visible: true,
+        timeout: navigationTimeout
+    });
+    logStep('Campo de contraseña encontrado');
+
     await targetPage.click(passwordSelector, { clickCount: 3 });
     await targetPage.keyboard.press('Backspace');
     await targetPage.type(passwordSelector, password, { delay: 0 });
+    logStep('Contraseña ingresada correctamente');
 
     const valuesArePresent = await targetPage.evaluate(
         (email, password) => {
@@ -115,15 +145,17 @@ logStep(`Navegador visible: ${headless ? 'NO (headless)' : 'SÍ'}`);
         throw new Error('Jibble no conservó el correo o la contraseña en los campos.');
     }
 
+    logStep('Esperando que el botón de inicio de sesión se habilite');
     await targetPage.waitForFunction(
         selector => {
             const button = document.querySelector(selector);
             return button && !button.disabled && button.getAttribute('aria-disabled') !== 'true';
         },
-        {},
+        { timeout: navigationTimeout },
         loginButtonSelector
     );
 
+    logStep('Botón de inicio de sesión habilitado');
     logStep('Enviando formulario de inicio de sesión');
     await Promise.all([
         targetPage.waitForNavigation({ waitUntil: 'networkidle2', timeout }).catch(() => null),
