@@ -22,6 +22,8 @@ function sendJson(response, statusCode, body) {
 }
 
 function runAutomation(mode) {
+    console.log(`[API] Iniciando proceso de automatización: ${mode}`);
+
     return new Promise((resolve, reject) => {
         const child = spawn(process.execPath, ['index.mjs', mode], {
             cwd: currentDirectory,
@@ -33,15 +35,21 @@ function runAutomation(mode) {
         let stderr = '';
 
         child.stdout.on('data', chunk => {
-            stdout += chunk.toString();
+            const output = chunk.toString();
+            stdout += output;
+            process.stdout.write(`[automatización:${mode}] ${output}`);
         });
 
         child.stderr.on('data', chunk => {
-            stderr += chunk.toString();
+            const output = chunk.toString();
+            stderr += output;
+            process.stderr.write(`[automatización:${mode}:error] ${output}`);
         });
 
         child.once('error', reject);
         child.once('close', code => {
+            console.log(`[API] Proceso ${mode} finalizado con código ${code}`);
+
             if (code === 0) {
                 resolve({ mode, message: 'Marcación completada correctamente', stdout });
                 return;
