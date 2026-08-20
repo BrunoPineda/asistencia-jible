@@ -51,12 +51,24 @@ const launchOptions = isDeveloper
     }
     : {
         headless,
-        slowMo: 10,
+        slowMo: 0,
         protocolTimeout: 120000,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage'
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--metrics-recording-only',
+            '--mute-audio',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--renderer-process-limit=1',
+            '--js-flags=--max-old-space-size=128',
+            '--disable-features=Translate,MediaRouter,OptimizationHints,PaintHolding'
         ]
     };
 
@@ -67,6 +79,20 @@ browser.on('disconnected', () => {
 });
 
 const page = await browser.newPage();
+
+if (!isDeveloper) {
+    // Evita descargar y renderizar recursos pesados que no necesita la automatización.
+    const cdpSession = await page.createCDPSession();
+    await cdpSession.send('Network.enable');
+    await cdpSession.send('Network.setBlockedURLs', {
+        urls: [
+            '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.svg',
+            '*.woff', '*.woff2', '*.ttf', '*.otf',
+            '*.mp3', '*.mp4', '*.webm', '*.avi'
+        ]
+    });
+}
+
 const timeout = 30000;
 const navigationTimeout = 60000;
 const executionMode = process.argv[2] ?? 'completo';
@@ -84,6 +110,9 @@ page.setDefaultNavigationTimeout(navigationTimeout);
 logStep(`Iniciando automatización en modo: ${executionMode}`);
 logStep(`Entorno: ${isDeveloper ? 'DESARROLLO (Windows)' : 'PRODUCCIÓN (Render)'}`);
 logStep(`Navegador visible: ${headless ? 'NO (headless)' : 'SÍ'}`);
+if (!isDeveloper) {
+    logStep('Modo de bajo consumo activado para Render');
+}
 
 {
     const targetPage = page;

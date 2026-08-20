@@ -31,18 +31,26 @@ function runAutomation(mode) {
             windowsHide: false
         });
 
+        const maxCapturedLogChars = 64 * 1024;
         let stdout = '';
         let stderr = '';
 
+        const appendLimited = (current, output) => {
+            const combined = current + output;
+            return combined.length > maxCapturedLogChars
+                ? combined.slice(-maxCapturedLogChars)
+                : combined;
+        };
+
         child.stdout.on('data', chunk => {
             const output = chunk.toString();
-            stdout += output;
+            stdout = appendLimited(stdout, output);
             process.stdout.write(`[automatización:${mode}] ${output}`);
         });
 
         child.stderr.on('data', chunk => {
             const output = chunk.toString();
-            stderr += output;
+            stderr = appendLimited(stderr, output);
             process.stderr.write(`[automatización:${mode}:error] ${output}`);
         });
 
