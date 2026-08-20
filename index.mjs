@@ -187,39 +187,32 @@ logStep('Iniciando marcación de salida');
 
     logStep('Esperando las acciones para terminar la sesión');
 
-    await targetPage.waitForFunction(
+    const clickedButtonHandle = await targetPage.waitForFunction(
         selector => {
             const container = document.querySelector(selector);
             if (!container) return false;
 
-            return [...container.querySelectorAll('button')].some(button => {
+            const buttons = [...container.querySelectorAll('button')].filter(button => {
                 const rect = button.getBoundingClientRect();
                 return rect.width > 0 &&
                     rect.height > 0 &&
                     !button.disabled &&
                     button.getAttribute('aria-disabled') !== 'true';
             });
+
+            const primaryButton = buttons.at(-1);
+            if (!primaryButton) return false;
+
+            const buttonText = primaryButton.innerText?.trim() || 'acción principal';
+            primaryButton.click();
+            return buttonText;
         },
-        { timeout: navigationTimeout },
+        { timeout: navigationTimeout, polling: 250 },
         actionsSelector
     );
 
-    const clickedButtonText = await targetPage.evaluate(selector => {
-        const container = document.querySelector(selector);
-        const buttons = [...container.querySelectorAll('button')].filter(button => {
-            const rect = button.getBoundingClientRect();
-            return rect.width > 0 &&
-                rect.height > 0 &&
-                !button.disabled &&
-                button.getAttribute('aria-disabled') !== 'true';
-        });
-
-        const primaryButton = buttons.at(-1);
-        const buttonText = primaryButton?.innerText?.trim() || 'acción principal';
-        primaryButton?.click();
-        return buttonText;
-    }, actionsSelector);
-
+    const clickedButtonText = await clickedButtonHandle.jsonValue();
+    await clickedButtonHandle.dispose();
     logStep(`Acción pulsada: ${clickedButtonText}`);
 }
 {
