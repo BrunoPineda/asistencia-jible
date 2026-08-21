@@ -59,7 +59,7 @@ function runAutomation(mode) {
             console.log(`[API] Proceso ${mode} finalizado con código ${code}`);
 
             if (code === 0) {
-                resolve({ mode, message: 'Marcación completada correctamente', stdout });
+                resolve({ mode, message: 'Marcación completada correctamente' });
                 return;
             }
 
