@@ -386,18 +386,14 @@ logStep('Iniciando marcación de entrada');
 {
     logStep('Seleccionando actividad');
     const targetPage = page;
-    await Locator.race([
-        targetPage.locator("[data-testid='select-activity']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"select-activity\\"])'),
-        targetPage.locator(":scope >>> [data-testid='select-activity']")
-    ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 248.39999389648438,
-            y: 27.399993896484375,
-          },
-        });
+    const activitySelector = "[data-testid='select-activity']";
+
+    await targetPage.waitForSelector(activitySelector, {
+        visible: true,
+        timeout: navigationTimeout
+    });
+    await targetPage.click(activitySelector);
+    await new Promise(resolve => setTimeout(resolve, 500));
 }
 {
     const targetPage = page;
@@ -416,18 +412,15 @@ logStep('Iniciando marcación de entrada');
 }
 {
     const targetPage = page;
-    await Locator.race([
-        targetPage.locator("[data-testid='select-project']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"select-project\\"])'),
-        targetPage.locator(":scope >>> [data-testid='select-project']")
-    ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 166.39999389648438,
-            y: 27.399993896484375,
-          },
-        });
+    const projectSelector = "[data-testid='select-project']";
+
+    logStep('Seleccionando proyecto');
+    await targetPage.waitForSelector(projectSelector, {
+        visible: true,
+        timeout: navigationTimeout
+    });
+    await targetPage.click(projectSelector);
+    await new Promise(resolve => setTimeout(resolve, 500));
 }
 {
     const targetPage = page;
