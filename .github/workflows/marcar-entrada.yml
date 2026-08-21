@@ -2,11 +2,10 @@ name: Marcar entrada Jibble
 
 on:
   schedule:
-    # 13:30 UTC = 08:30 a. m. en Perú
-    # Se ejecuta de lunes a viernes
-    - cron: "30 13 * * 1-5"
+    # 13:25 UTC = 08:25 a. m. en Perú
+    # Lunes a viernes
+    - cron: "25 13 * * 1-5"
 
-  # Permite probarlo manualmente desde GitHub
   workflow_dispatch:
 
 jobs:
@@ -21,9 +20,6 @@ jobs:
             --show-error \
             --location \
             --request POST \
-            --retry 3 \
-            --retry-delay 15 \
-            --retry-all-errors \
             --connect-timeout 60 \
             --max-time 480 \
             "https://asistencia-jible.onrender.com/api/asistencia/entrada"
