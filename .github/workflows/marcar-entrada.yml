@@ -17,13 +17,33 @@ jobs:
     steps:
       - name: Ejecutar API de entrada
         run: |
-          curl --fail \
-            --show-error \
-            --location \
-            --request POST \
-            --retry 3 \
-            --retry-delay 15 \
-            --retry-all-errors \
-            --connect-timeout 60 \
-            --max-time 480 \
-            "https://asistencia-jible.onrender.com/api/asistencia/entrada"
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          curl_exit_code=0
+          http_code="$(
+            curl --fail-with-body \
+              --show-error \
+              --location \
+              --request POST \
+              --retry 3 \
+              --retry-delay 15 \
+              --retry-all-errors \
+              --connect-timeout 60 \
+              --max-time 480 \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              "https://asistencia-jible.onrender.com/api/asistencia/entrada"
+          )" || curl_exit_code=$?
+
+          if [ "$http_code" = "409" ]; then
+            echo "La API indicó que ya hay una marcación en ejecución. Se considera un resultado válido."
+            cat "$response_file"
+            exit 0
+          fi
+
+          if [ "$curl_exit_code" -ne 0 ]; then
+            echo "La API devolvió HTTP $http_code"
+            cat "$response_file"
+            exit "$curl_exit_code"
+          fi
