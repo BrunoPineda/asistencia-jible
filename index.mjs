@@ -288,6 +288,7 @@ logStep('Iniciando marcación de salida');
 
     await targetPage.click(clockOutSelector);
     logStep('Botón de salida pulsado');
+    await new Promise(resolve => setTimeout(resolve, 2000));
 }
 {
     const targetPage = page;
@@ -380,6 +381,7 @@ logStep('Iniciando marcación de entrada');
         .scroll();
     await targetPage.click(clockInSelector);
     logStep('Botón verde de entrada pulsado');
+    await new Promise(resolve => setTimeout(resolve, 2000));
 }
 {
     logStep('Seleccionando actividad');
