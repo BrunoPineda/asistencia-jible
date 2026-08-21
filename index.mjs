@@ -29,9 +29,9 @@ if (isDeveloper) {
 }
 
 const { Locator, launch } = await import('puppeteer');
-const headless = isDeveloper
-    ? false
-    : String(process.env.BROWSER_HEADLESS ?? 'true').toLowerCase() === 'true';
+const headless = String(
+    process.env.BROWSER_HEADLESS ?? (isDeveloper ? 'false' : 'true')
+).toLowerCase() === 'true';
 
 if (!email || !password) {
     throw new Error('Faltan JIBBLE_EMAIL o JIBBLE_PASSWORD en el archivo .env');
@@ -39,7 +39,7 @@ if (!email || !password) {
 
 const launchOptions = isDeveloper
     ? {
-        headless: false,
+        headless,
         channel: 'chrome',
         slowMo: 10,
         protocolTimeout: 120000,
