@@ -1,0 +1,41 @@
+name: Marcar entrada Jibble
+
+on:
+  schedule:
+    # Lunes a viernes, 8:30 a. m. de Perú
+    - cron: "30 13 * * 1-5"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jibble-entrada
+  cancel-in-progress: false
+
+jobs:
+  marcar-entrada:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar marcación de entrada
+        run: npm run entrada
+        env:
+          JIBBLE_EMAIL: ${{ secrets.JIBBLE_EMAIL }}
+          JIBBLE_PASSWORD: ${{ secrets.JIBBLE_PASSWORD }}
+          DEVELOPER: "false"
+          BROWSER_HEADLESS: "true"
