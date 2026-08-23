@@ -16,10 +16,23 @@ jobs:
     steps:
       - name: Ejecutar API de entrada
         run: |
-          curl --fail \
+          status_code="$(curl \
+            --silent \
             --show-error \
             --location \
             --request POST \
             --connect-timeout 60 \
             --max-time 480 \
-            "https://asistencia-jible.onrender.com/api/asistencia/entrada"
+            --output /tmp/entrada-response.json \
+            --write-out "%{http_code}" \
+            "https://asistencia-jible.onrender.com/api/asistencia/entrada")"
+
+          cat /tmp/entrada-response.json || true
+
+          if [ "$status_code" = "200" ] || [ "$status_code" = "409" ]; then
+            echo "Solicitud completada con código $status_code"
+            exit 0
+          fi
+
+          echo "La solicitud falló con código HTTP $status_code"
+          exit 1

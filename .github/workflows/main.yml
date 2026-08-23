@@ -20,22 +20,25 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Descargar proyecto
-        uses: actions/checkout@v4
+      - name: Ejecutar API de entrada
+        run: |
+          status_code="$(curl \
+            --silent \
+            --show-error \
+            --location \
+            --request POST \
+            --connect-timeout 60 \
+            --max-time 480 \
+            --output /tmp/entrada-response.json \
+            --write-out "%{http_code}" \
+            "https://asistencia-jible.onrender.com/api/asistencia/entrada")"
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+          cat /tmp/entrada-response.json || true
 
-      - name: Instalar dependencias
-        run: npm ci
+          if [ "$status_code" = "200" ] || [ "$status_code" = "409" ]; then
+            echo "Solicitud completada con código $status_code"
+            exit 0
+          fi
 
-      - name: Ejecutar marcación de entrada
-        run: npm run entrada
-        env:
-          JIBBLE_EMAIL: ${{ secrets.JIBBLE_EMAIL }}
-          JIBBLE_PASSWORD: ${{ secrets.JIBBLE_PASSWORD }}
-          DEVELOPER: "false"
-          BROWSER_HEADLESS: "true"
+          echo "La solicitud falló con código HTTP $status_code"
+          exit 1
