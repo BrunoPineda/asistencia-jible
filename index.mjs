@@ -214,10 +214,20 @@ if (!isDeveloper) {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     const dashboardIsVisible = await targetPage.evaluate(() => {
-        return Boolean(
-            document.querySelector("[data-testid='button-clock-out']") ||
-            document.querySelector("[data-testid='button-clock-in']")
-        );
+        const isVisible = selector => {
+            const element = document.querySelector(selector);
+            if (!element) return false;
+
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return style.display !== 'none' &&
+                style.visibility !== 'hidden' &&
+                rect.width > 0 &&
+                rect.height > 0;
+        };
+
+        return isVisible("[data-testid='button-clock-out']") ||
+            isVisible("[data-testid='button-clock-in']");
     });
 
     if (!dashboardIsVisible && targetPage.url() === loginUrlBeforeSubmit) {
@@ -231,10 +241,22 @@ if (!isDeveloper) {
     try {
         await targetPage.waitForFunction(
             () => {
-                return Boolean(
-                    document.querySelector("[data-testid='button-clock-out']") ||
-                    document.querySelector("[data-testid='button-clock-in']")
-                );
+                const isReady = selector => {
+                    const element = document.querySelector(selector);
+                    if (!element) return false;
+
+                    const rect = element.getBoundingClientRect();
+                    const style = window.getComputedStyle(element);
+                    return style.display !== 'none' &&
+                        style.visibility !== 'hidden' &&
+                        rect.width > 0 &&
+                        rect.height > 0 &&
+                        !element.disabled &&
+                        element.getAttribute('aria-disabled') !== 'true';
+                };
+
+                return isReady("[data-testid='button-clock-out']") ||
+                    isReady("[data-testid='button-clock-in']");
             },
             { timeout: navigationTimeout, polling: 500 }
         );
@@ -380,7 +402,7 @@ logStep('Iniciando marcación de entrada');
 
     await targetPage.waitForSelector(clockInSelector, {
         visible: true,
-        timeout
+        timeout: navigationTimeout
     });
 
     await targetPage.waitForFunction(
@@ -400,12 +422,12 @@ logStep('Iniciando marcación de entrada');
                 !button.disabled &&
                 button.getAttribute('aria-disabled') !== 'true';
         },
-        { timeout },
+        { timeout: navigationTimeout },
         clockInSelector
     );
 
     await targetPage.locator(clockInSelector)
-        .setTimeout(timeout)
+        .setTimeout(navigationTimeout)
         .scroll();
     await targetPage.click(clockInSelector);
     logStep('Botón verde de entrada pulsado');
@@ -425,18 +447,15 @@ logStep('Iniciando marcación de entrada');
 }
 {
     const targetPage = page;
-    await Locator.race([
-        targetPage.locator("[data-testid='Cumplimiento\\ de\\ horario']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"Cumplimiento de horario\\"])'),
-        targetPage.locator(":scope >>> [data-testid='Cumplimiento\\ de\\ horario']")
-    ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 137.39999389648438,
-            y: 13.399993896484375,
-          },
-        });
+    const activityOptionSelector = '[data-testid="Cumplimiento de horario"]';
+
+    logStep('Esperando la opción Cumplimiento de horario');
+    await targetPage.waitForSelector(activityOptionSelector, {
+        visible: true,
+        timeout: navigationTimeout
+    });
+    await targetPage.click(activityOptionSelector);
+    logStep('Actividad seleccionada correctamente');
 }
 {
     const targetPage = page;
@@ -447,23 +466,29 @@ logStep('Iniciando marcación de entrada');
         visible: true,
         timeout: navigationTimeout
     });
+    await targetPage.waitForFunction(
+        selector => {
+            const field = document.querySelector(selector);
+            return field &&
+                !field.disabled &&
+                field.getAttribute('aria-disabled') !== 'true';
+        },
+        { timeout: navigationTimeout, polling: 250 },
+        projectSelector
+    );
     await targetPage.click(projectSelector);
-    await new Promise(resolve => setTimeout(resolve, 500));
 }
 {
     const targetPage = page;
-    await Locator.race([
-        targetPage.locator("[data-testid='Marcación\\ de\\ horario\\ -\\ UTP']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"Marcación de horario - UTP\\"])'),
-        targetPage.locator(":scope >>> [data-testid='Marcación\\ de\\ horario\\ -\\ UTP']")
-    ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 110.39999389648438,
-            y: 5.39996337890625,
-          },
-        });
+    const projectOptionSelector = '[data-testid="Marcación de horario - UTP"]';
+
+    logStep('Esperando la opción Marcación de horario - UTP');
+    await targetPage.waitForSelector(projectOptionSelector, {
+        visible: true,
+        timeout: navigationTimeout
+    });
+    await targetPage.click(projectOptionSelector);
+    logStep('Proyecto seleccionado correctamente');
 }
 {
     const targetPage = page;
