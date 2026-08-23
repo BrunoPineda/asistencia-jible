@@ -264,17 +264,44 @@ if (!isDeveloper) {
 }
 
 if (executionMode !== 'entrada') {
-logStep('Iniciando marcación de salida');
-{
-    const targetPage = page;
-    const clockOutSelector = "[data-testid='button-clock-out']";
+const targetPage = page;
+const clockOutSelector = "[data-testid='button-clock-out']";
+const clockInSelector = "[data-testid='button-clock-in']";
 
-    logStep('Esperando el botón de salida');
-    await targetPage.waitForSelector(clockOutSelector, {
-        visible: true,
-        timeout: navigationTimeout
-    });
+const visibleClockButton = await targetPage.waitForFunction(
+    (outSelector, inSelector) => {
+        const isVisible = selector => {
+            const element = document.querySelector(selector);
+            if (!element) return false;
 
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return style.display !== 'none' &&
+                style.visibility !== 'hidden' &&
+                rect.width > 0 &&
+                rect.height > 0;
+        };
+
+        if (isVisible(outSelector)) return 'salida';
+        if (isVisible(inSelector)) return 'entrada';
+        return false;
+    },
+    { timeout: navigationTimeout, polling: 250 },
+    clockOutSelector,
+    clockInSelector
+).then(handle => handle.jsonValue());
+
+if (visibleClockButton === 'entrada') {
+    if (executionMode === 'salida') {
+        logStep('No hay una sesión activa: Jibble ya muestra el botón de entrada');
+        logStep('No es necesario marcar salida');
+        await browser.close();
+        process.exit(0);
+    }
+
+    logStep('Jibble ya se encuentra fuera de sesión; se omite la salida');
+} else {
+    logStep('Iniciando marcación de salida');
     await targetPage.waitForFunction(
         selector => {
             const button = document.querySelector(selector);
@@ -289,8 +316,8 @@ logStep('Iniciando marcación de salida');
     await targetPage.click(clockOutSelector);
     logStep('Botón de salida pulsado');
     await new Promise(resolve => setTimeout(resolve, 2000));
-}
 {
+
     const targetPage = page;
     const actionsSelector = '.q-card__actions';
 
@@ -340,6 +367,7 @@ logStep('Iniciando marcación de salida');
             y: 25.54998779296875,
           },
         });
+}
 }
 }
 
@@ -512,4 +540,3 @@ logStep('Iniciando marcación de entrada');
 logStep('Cerrando navegador');
 await browser.close();
 logStep('Automatización finalizada correctamente');
-
