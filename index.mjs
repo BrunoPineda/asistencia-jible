@@ -431,19 +431,76 @@ logStep('Iniciando marcación de entrada');
         .scroll();
     await targetPage.click(clockInSelector);
     logStep('Botón verde de entrada pulsado');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const activitySelector = "[data-testid='select-activity']";
+    try {
+        await targetPage.waitForSelector(activitySelector, {
+            visible: true,
+            timeout: 5000
+        });
+        logStep('Panel de marcación abierto correctamente');
+    } catch {
+        logStep('El panel no se abrió con el primer clic; reintentando');
+
+        await targetPage.evaluate(selector => {
+            const button = document.querySelector(selector);
+            if (!button) {
+                throw new Error('No se encontró nuevamente el botón verde de entrada');
+            }
+            button.scrollIntoView({ block: 'center', inline: 'center' });
+            button.click();
+        }, clockInSelector);
+
+        await targetPage.waitForSelector(activitySelector, {
+            visible: true,
+            timeout: navigationTimeout
+        });
+        logStep('Panel de marcación abierto en el segundo intento');
+    }
 }
 {
     logStep('Seleccionando actividad');
     const targetPage = page;
     const activitySelector = "[data-testid='select-activity']";
 
-    await targetPage.waitForSelector(activitySelector, {
-        visible: true,
-        timeout: navigationTimeout
-    });
-    await targetPage.click(activitySelector);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const activitySelectors = [
+        activitySelector,
+        'input[placeholder="Selecciona una actividad"]',
+        'input[type="search"][role="combobox"][data-testid*="activity"]',
+        'input.q-field__input[role="combobox"][placeholder*="actividad"]'
+    ];
+
+    const activityInputHandle = await targetPage.waitForFunction(
+        selectors => {
+            for (const selector of selectors) {
+                const input = document.querySelector(selector);
+                if (!input) continue;
+
+                const rect = input.getBoundingClientRect();
+                const style = window.getComputedStyle(input);
+                const isVisible = style.display !== 'none' &&
+                    style.visibility !== 'hidden' &&
+                    rect.width > 0 &&
+                    rect.height > 0;
+
+                if (isVisible &&
+                    !input.disabled &&
+                    input.getAttribute('aria-disabled') !== 'true') {
+                    input.scrollIntoView({ block: 'center', inline: 'center' });
+                    input.focus();
+                    input.click();
+                    return selector;
+                }
+            }
+            return false;
+        },
+        { timeout: navigationTimeout, polling: 250 },
+        activitySelectors
+    );
+
+    const matchedActivitySelector = await activityInputHandle.jsonValue();
+    await activityInputHandle.dispose();
+    logStep(`Campo de actividad encontrado mediante: ${matchedActivitySelector}`);
 }
 {
     const targetPage = page;
@@ -462,21 +519,44 @@ logStep('Iniciando marcación de entrada');
     const projectSelector = "[data-testid='select-project']";
 
     logStep('Seleccionando proyecto');
-    await targetPage.waitForSelector(projectSelector, {
-        visible: true,
-        timeout: navigationTimeout
-    });
-    await targetPage.waitForFunction(
-        selector => {
-            const field = document.querySelector(selector);
-            return field &&
-                !field.disabled &&
-                field.getAttribute('aria-disabled') !== 'true';
+    const projectSelectors = [
+        projectSelector,
+        'input[placeholder="Selecciona un proyecto"]',
+        'input[type="search"][role="combobox"][data-testid*="project"]',
+        'input.q-field__input[role="combobox"][placeholder*="proyecto"]'
+    ];
+
+    const projectInputHandle = await targetPage.waitForFunction(
+        selectors => {
+            for (const selector of selectors) {
+                const input = document.querySelector(selector);
+                if (!input) continue;
+
+                const rect = input.getBoundingClientRect();
+                const style = window.getComputedStyle(input);
+                const isVisible = style.display !== 'none' &&
+                    style.visibility !== 'hidden' &&
+                    rect.width > 0 &&
+                    rect.height > 0;
+
+                if (isVisible &&
+                    !input.disabled &&
+                    input.getAttribute('aria-disabled') !== 'true') {
+                    input.scrollIntoView({ block: 'center', inline: 'center' });
+                    input.focus();
+                    input.click();
+                    return selector;
+                }
+            }
+            return false;
         },
         { timeout: navigationTimeout, polling: 250 },
-        projectSelector
+        projectSelectors
     );
-    await targetPage.click(projectSelector);
+
+    const matchedProjectSelector = await projectInputHandle.jsonValue();
+    await projectInputHandle.dispose();
+    logStep(`Campo de proyecto encontrado mediante: ${matchedProjectSelector}`);
 }
 {
     const targetPage = page;
