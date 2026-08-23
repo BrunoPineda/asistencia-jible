@@ -37,5 +37,5 @@ jobs:
         env:
           JIBBLE_EMAIL: ${{ secrets.JIBBLE_EMAIL }}
           JIBBLE_PASSWORD: ${{ secrets.JIBBLE_PASSWORD }}
-          DEVELOPER: "false"
+          DEVELOPER: "true"
           BROWSER_HEADLESS: "true"
