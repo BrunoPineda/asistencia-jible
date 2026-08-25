@@ -372,60 +372,64 @@ if (visibleClockButton === 'entrada') {
 
     await targetPage.click(clockOutSelector);
     logStep('Botón de salida pulsado');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-{
 
-    const targetPage = page;
-    const actionsSelector = '.q-card__actions';
-
-    logStep('Esperando las acciones para terminar la sesión');
-
-    const clickedButtonHandle = await targetPage.waitForFunction(
-        selector => {
-            const container = document.querySelector(selector);
-            if (!container) return false;
-
-            const buttons = [...container.querySelectorAll('button')].filter(button => {
-                const rect = button.getBoundingClientRect();
-                return rect.width > 0 &&
-                    rect.height > 0 &&
-                    !button.disabled &&
-                    button.getAttribute('aria-disabled') !== 'true';
-            });
-
-            const primaryButton = buttons.at(-1);
-            if (!primaryButton) return false;
-
-            const buttonText = primaryButton.innerText?.trim() || 'acción principal';
-            primaryButton.click();
-            return buttonText;
-        },
-        { timeout: navigationTimeout, polling: 250 },
-        actionsSelector
-    );
-
-    const clickedButtonText = await clickedButtonHandle.jsonValue();
-    await clickedButtonHandle.dispose();
-    logStep(`Acción pulsada: ${clickedButtonText}`);
-}
-{
-    const targetPage = page;
-    logStep('Confirmando la marcación de salida');
-    await Locator.race([
-        targetPage.locator("[data-testid='right-sidebar-confirm-btn'] > span.q-btn__content"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"right-sidebar-confirm-btn\\"]/span[2])'),
-        targetPage.locator(":scope >>> [data-testid='right-sidebar-confirm-btn'] > span.q-btn__content"),
-        targetPage.locator('::-p-text(Guardar)')
-    ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 38.399993896484375,
-            y: 25.54998779296875,
-          },
+    const confirmButtonSelector = "[data-testid='right-sidebar-confirm-btn'], .q-card__actions button";
+    try {
+        await targetPage.waitForSelector(confirmButtonSelector, {
+            visible: true,
+            timeout: 5000
         });
+        logStep('Panel/Diálogo de salida abierto correctamente');
+    } catch {
+        logStep('El diálogo no apareció en 5s; reintentando clic en botón de salida');
+        await targetPage.evaluate(selector => {
+            const button = document.querySelector(selector);
+            button?.scrollIntoView({ block: 'center', inline: 'center' });
+            button?.click();
+        }, clockOutSelector);
+
+        await targetPage.waitForSelector(confirmButtonSelector, {
+            visible: true,
+            timeout: 10000
+        });
+        logStep('Panel/Diálogo de salida abierto en el segundo intento');
+    }
+
+    logStep('Confirmando la marcación de salida');
+    const clickedConfirm = await targetPage.evaluate(() => {
+        const primaryConfirmBtn = document.querySelector("[data-testid='right-sidebar-confirm-btn']");
+        if (primaryConfirmBtn) {
+            primaryConfirmBtn.click();
+            return 'right-sidebar-confirm-btn';
+        }
+
+        const cardActions = document.querySelector('.q-card__actions');
+        if (cardActions) {
+            const buttons = [...cardActions.querySelectorAll('button')].filter(b => !b.disabled);
+            const lastBtn = buttons.at(-1);
+            if (lastBtn) {
+                lastBtn.click();
+                return lastBtn.innerText?.trim() || 'card-action-btn';
+            }
+        }
+
+        return false;
+    });
+
+    if (!clickedConfirm) {
+        logStep('Haciendo clic mediante Locator fallback en botón de salida');
+        await Locator.race([
+            targetPage.locator("[data-testid='right-sidebar-confirm-btn']"),
+            targetPage.locator('::-p-text(Guardar)')
+        ])
+            .setTimeout(timeout)
+            .click();
+    } else {
+        logStep(`Confirmación pulsada mediante selector: ${clickedConfirm}`);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 3000));
     await sendTelegramNotification('🔴 <b>Jibble:</b> Marcación de salida realizada correctamente.');
-}
 }
 }
 
