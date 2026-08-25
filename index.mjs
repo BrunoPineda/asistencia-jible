@@ -21,7 +21,41 @@ try {
 
 const email = process.env.JIBBLE_EMAIL;
 const password = process.env.JIBBLE_PASSWORD;
+const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+const telegramChatId = process.env.TELEGRAM_CHAT_ID;
 const isDeveloper = String(process.env.DEVELOPER ?? 'false').toLowerCase() === 'true';
+
+const sendTelegramNotification = async (text) => {
+    if (!telegramToken || !telegramChatId) return;
+
+    try {
+        const url = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: telegramChatId,
+                text,
+                parse_mode: 'HTML'
+            })
+        });
+    } catch (err) {
+        console.error(`[${new Date().toISOString()}] Error al enviar notificación por Telegram: ${err.message}`);
+    }
+};
+
+process.on('uncaughtException', async (error) => {
+    console.error(`[${new Date().toISOString()}] Excepción no capturada:`, error);
+    await sendTelegramNotification(`❌ <b>Error en Marcación:</b> ${error.message}`);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', async (reason) => {
+    const errorMsg = reason instanceof Error ? reason.message : String(reason);
+    console.error(`[${new Date().toISOString()}] Promesa rechazada:`, reason);
+    await sendTelegramNotification(`❌ <b>Error en Marcación:</b> ${errorMsg}`);
+    process.exit(1);
+});
 
 if (isDeveloper) {
     // Evita que Windows intente utilizar la ruta Linux configurada para Render.
@@ -317,6 +351,7 @@ if (visibleClockButton === 'entrada') {
     if (executionMode === 'salida') {
         logStep('No hay una sesión activa: Jibble ya muestra el botón de entrada');
         logStep('No es necesario marcar salida');
+        await sendTelegramNotification('ℹ️ <b>Jibble:</b> No hay una sesión activa. No es necesario marcar salida.');
         await browser.close();
         process.exit(0);
     }
@@ -389,16 +424,52 @@ if (visibleClockButton === 'entrada') {
             y: 25.54998779296875,
           },
         });
+    await sendTelegramNotification('🔴 <b>Jibble:</b> Marcación de salida realizada correctamente.');
 }
 }
 }
 
 if (executionMode !== 'salida') {
 logStep('Iniciando marcación de entrada');
-// Después de marcar la salida, esperar y pulsar específicamente el botón verde.
+// La entrada es idempotente: si Jibble ya muestra salida, la sesión está activa.
 {
     const targetPage = page;
     const clockInSelector = "[data-testid='button-clock-in']";
+    const clockOutSelector = "[data-testid='button-clock-out']";
+
+    const currentClockStateHandle = await targetPage.waitForFunction(
+        (inSelector, outSelector) => {
+            const isVisible = selector => {
+                const element = document.querySelector(selector);
+                if (!element) return false;
+
+                const rect = element.getBoundingClientRect();
+                const style = window.getComputedStyle(element);
+                return style.display !== 'none' &&
+                    style.visibility !== 'hidden' &&
+                    rect.width > 0 &&
+                    rect.height > 0;
+            };
+
+            if (isVisible(outSelector)) return 'dentro';
+            if (isVisible(inSelector)) return 'fuera';
+            return false;
+        },
+        { timeout: navigationTimeout, polling: 250 },
+        clockInSelector,
+        clockOutSelector
+    );
+
+    const currentClockState = await currentClockStateHandle.jsonValue();
+    await currentClockStateHandle.dispose();
+
+    if (executionMode === 'entrada' && currentClockState === 'dentro') {
+        logStep('La entrada ya estaba marcada; no se realizará una marcación duplicada');
+        await sendTelegramNotification('ℹ️ <b>Jibble:</b> La entrada ya estaba marcada. No se realizará marcación duplicada.');
+        await browser.close();
+        logStep('Automatización finalizada correctamente');
+        process.exit(0);
+    }
 
     await targetPage.waitForSelector(clockInSelector, {
         visible: true,
@@ -586,6 +657,7 @@ logStep('Iniciando marcación de entrada');
           },
         });
     logStep('Marcación de entrada guardada correctamente');
+    await sendTelegramNotification('🟢 <b>Jibble:</b> Marcación de entrada realizada correctamente.');
 }
 }
 

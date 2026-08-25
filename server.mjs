@@ -59,7 +59,18 @@ function runAutomation(mode) {
             console.log(`[API] Proceso ${mode} finalizado con código ${code}`);
 
             if (code === 0) {
-                resolve({ mode, message: 'Marcación completada correctamente' });
+                let message = 'Marcación completada correctamente';
+                let alreadyMarked = false;
+
+                if (stdout.includes('La entrada ya estaba marcada')) {
+                    message = 'La entrada ya estaba marcada; no se realizará una marcación duplicada';
+                    alreadyMarked = true;
+                } else if (stdout.includes('No es necesario marcar salida')) {
+                    message = 'No hay una sesión activa: Jibble ya muestra el botón de entrada';
+                    alreadyMarked = true;
+                }
+
+                resolve({ mode, message, alreadyMarked });
                 return;
             }
 

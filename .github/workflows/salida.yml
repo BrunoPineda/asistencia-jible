@@ -1,9 +1,9 @@
-name: Marcar entrada Jibble
+name: Marcar salida Jibble
 
 on:
   schedule:
-    # Lunes a viernes, 8:30 a. m. de Perú
-    - cron: "25 13 * * 1-5"
+    # Lunes a viernes, 6:30 p. m. de Perú (23:30 UTC)
+    - cron: "30 23 * * 1-5"
 
   workflow_dispatch:
 
@@ -11,11 +11,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: jibble-entrada
+  group: jibble-salida
   cancel-in-progress: false
 
 jobs:
-  marcar-entrada:
+  marcar-salida:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -32,8 +32,8 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Ejecutar marcación de entrada
-        run: npm run entrada
+      - name: Ejecutar marcación de salida
+        run: npm run salida
         env:
           JIBBLE_EMAIL: ${{ secrets.JIBBLE_EMAIL }}
           JIBBLE_PASSWORD: ${{ secrets.JIBBLE_PASSWORD }}
@@ -47,5 +47,4 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d '{"chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}", "text": "❌ <b>GitHub Action Jibble:</b> Falló la ejecución de la marcación de entrada.", "parse_mode": "HTML"}'
-
+            -d '{"chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}", "text": "❌ <b>GitHub Action Jibble:</b> Falló la ejecución de la marcación de salida.", "parse_mode": "HTML"}'
