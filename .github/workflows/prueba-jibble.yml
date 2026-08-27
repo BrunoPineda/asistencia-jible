@@ -3,7 +3,7 @@ name: Prueba Jibble Telegram
 on:
   schedule:
     # 9:25 a. m. hora de Perú (UTC-5) => 14:25 UTC (Lunes a Viernes)
-    - cron: "25 14 * * 1-5"
+    - cron: "15-45/5 13 * * 1-5"
 
   workflow_dispatch:
 
