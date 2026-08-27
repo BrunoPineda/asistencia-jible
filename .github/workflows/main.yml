@@ -2,9 +2,8 @@ name: Marcar entrada Jibble
 
 on:
   schedule:
-    # Lunes a viernes, 8:30 a. m. de Perú
-    - cron: "45 12 * * 1-5" # 7:45 a. m. Perú
-
+    - cron: "30 13 * * 1-5" # 8:30 AM GMT-5
+    
   workflow_dispatch:
 
 permissions:
