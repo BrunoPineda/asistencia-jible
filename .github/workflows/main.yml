@@ -1,9 +1,6 @@
 name: Marcar entrada Jibble
 
 on:
-  schedule:
-    - cron: "30 13 * * 1-5" # 8:30 AM GMT-5
-    
   workflow_dispatch:
 
 permissions:
@@ -40,4 +37,3 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DEVELOPER: "false"
           BROWSER_HEADLESS: "true"
-
