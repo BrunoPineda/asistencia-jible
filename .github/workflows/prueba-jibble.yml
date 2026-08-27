@@ -1,0 +1,39 @@
+name: Prueba Jibble Telegram
+
+on:
+  schedule:
+    # 9:25 a. m. hora de Perú (UTC-5) => 14:25 UTC (Lunes a Viernes)
+    - cron: "25 14 * * 1-5"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jibble-prueba
+  cancel-in-progress: false
+
+jobs:
+  prueba-jibble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar prueba Jibble
+        run: npm run pruebajibble -- --now
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
